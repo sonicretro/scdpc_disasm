@@ -154,22 +154,32 @@ namespace SCDPCObjectDefinitions.Common
         public MonitorSCDObjectEntry() : base() { }
         public MonitorSCDObjectEntry(byte[] file, int address) : base(file, address) { }
 
-        public MonitorType Type
+        public MonitorType Contents
         {
             get
             {
-                return (MonitorType)(SubType & 8);
+			    if (SubType > 9) return MonitorType.Invalid;
+                return (MonitorType)SubType;
             }
             set
             {
-                SubType = (byte)((SubType & ~8) | (int)value);
+                SubType = (byte)value;
             }
         }
 		
 		public enum MonitorType
 		{
-		    Monitor = 0,
-			Timepost = 8
+		    OneUp,
+			Ring,
+			Shield,
+			Invincibility,
+			Shoes,
+			Clock,
+			SilverRing,
+			S,
+			Past,
+			Future,
+			Invalid
 		}
     }
 }
