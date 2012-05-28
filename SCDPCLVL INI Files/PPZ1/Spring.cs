@@ -2,34 +2,24 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
-using SonicRetro.SonLVL;
+using SonicRetro.SonLVL.API;
 
 namespace SCDPCObjectDefinitions.PPZ1
 {
     class Spring : ObjectDefinition
     {
-        private List<Point> offsets = new List<Point>();
-        private List<BitmapBits> imgs = new List<BitmapBits>();
+        private List<Sprite> imgs = new List<Sprite>();
 
-        public override void Init(Dictionary<string, string> data)
+        public override void Init(ObjectData data)
         {
-            Point off = new Point();
-            imgs.Add(ObjectHelper.Sprite(479, out off)); // 0x00
-            offsets.Add(off);
-            imgs.Add(ObjectHelper.Sprite(467, out off)); // 0x02
-            offsets.Add(off);
-            imgs.Add(ObjectHelper.Sprite(482, out off)); // 0x10
-            offsets.Add(off);
-            imgs.Add(ObjectHelper.Sprite(470, out off)); // 0x12
-            offsets.Add(off);
-            imgs.Add(ObjectHelper.Sprite(485, out off)); // 0x20
-            offsets.Add(off);
-            imgs.Add(ObjectHelper.Sprite(473, out off)); // 0x22
-            offsets.Add(off);
+            imgs.Add(ObjectHelper.GetSprite(479)); // 0x00
+            imgs.Add(ObjectHelper.GetSprite(467)); // 0x02
+            imgs.Add(ObjectHelper.GetSprite(482)); // 0x10
+            imgs.Add(ObjectHelper.GetSprite(470)); // 0x12
+            imgs.Add(ObjectHelper.GetSprite(485)); // 0x20
+            imgs.Add(ObjectHelper.GetSprite(473)); // 0x22
             imgs.Add(imgs[0]); // 0x30
-            offsets.Add(offsets[0]);
             imgs.Add(imgs[1]); // 0x32
-            offsets.Add(offsets[1]);
         }
 
         public override ReadOnlyCollection<byte> Subtypes()
@@ -52,14 +42,9 @@ namespace SCDPCObjectDefinitions.PPZ1
             return ((SpringDirection)((subtype & 0x30) >> 4)).ToString() + " " + ((SpringColor)((subtype & 2) >> 1)).ToString();
         }
 
-        public override string FullName(byte subtype)
-        {
-            return SubtypeName(subtype) + " " + Name();
-        }
-
         public override BitmapBits Image()
         {
-            return imgs[0];
+            return imgs[0].Image;
         }
 
         private int imgindex(byte subtype)
@@ -71,19 +56,20 @@ namespace SCDPCObjectDefinitions.PPZ1
 
         public override BitmapBits Image(byte subtype)
         {
-            return imgs[imgindex(subtype)];
+            return imgs[imgindex(subtype)].Image;
         }
 
-        public override Rectangle Bounds(Point loc, byte subtype)
+        public override Rectangle Bounds(ObjectEntry obj, Point camera)
         {
-            return new Rectangle(loc.X + offsets[imgindex(subtype)].X, loc.Y + offsets[imgindex(subtype)].Y, imgs[imgindex(subtype)].Width, imgs[imgindex(subtype)].Height);
+            return new Rectangle(obj.X + imgs[imgindex(obj.SubType)].X - camera.X, obj.Y + imgs[imgindex(obj.SubType)].Y - camera.Y, imgs[imgindex(obj.SubType)].Width, imgs[imgindex(obj.SubType)].Height);
         }
 
-        public override void Draw(BitmapBits bmp, Point loc, byte subtype, bool XFlip, bool YFlip, bool includeDebug)
+        public override Sprite GetSprite(ObjectEntry obj)
         {
-            BitmapBits bits = new BitmapBits(imgs[imgindex(subtype)]);
-            bits.Flip(XFlip, YFlip);
-            bmp.DrawBitmapComposited(bits, new Point(loc.X + offsets[imgindex(subtype)].X, loc.Y + offsets[imgindex(subtype)].Y));
+            byte subtype = obj.SubType;
+            BitmapBits bits = new BitmapBits(imgs[imgindex(subtype)].Image);
+            bits.Flip(obj.XFlip, obj.YFlip);
+            return new Sprite(bits, new Point(obj.X + imgs[imgindex(subtype)].Offset.X, obj.Y + imgs[imgindex(subtype)].Offset.Y));
         }
 
         public override Type ObjectType

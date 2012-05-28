@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
-using SonicRetro.SonLVL;
+using SonicRetro.SonLVL.API;
 
 namespace SCDPCObjectDefinitions.PPZ1
 {
@@ -27,11 +27,10 @@ namespace SCDPCObjectDefinitions.PPZ1
                                      new Size(-0x18, 0x10)
                                  };
 
-        private Point offset;
-        private BitmapBits img;
-        public override void Init(Dictionary<string, string> data)
+        private Sprite img;
+        public override void Init(ObjectData data)
         {
-            img = ObjectHelper.Sprite(362, out offset);
+            img = ObjectHelper.GetSprite(362);
         }
 
         public override ReadOnlyCollection<byte> Subtypes()
@@ -54,38 +53,37 @@ namespace SCDPCObjectDefinitions.PPZ1
             return string.Empty;
         }
 
-        public override string FullName(byte subtype)
-        {
-            return Name();
-        }
-
         public override BitmapBits Image()
         {
-            return img;
+            return img.Image;
         }
 
         public override BitmapBits Image(byte subtype)
         {
-            return img;
+            return img.Image;
         }
 
-        public override Rectangle Bounds(Point loc, byte subtype)
+        public override Rectangle Bounds(ObjectEntry obj, Point camera)
         {
-            int count = Math.Min(6, subtype & 7);
-            Size space = Spacing[subtype >> 4];
-            return new Rectangle(loc.X + offset.X, loc.Y + offset.Y, (space.Width * count) + img.Width, (space.Height * count) + img.Height);
+            int count = Math.Min(6, obj.SubType & 7);
+            Size space = Spacing[obj.SubType >> 4];
+            return new Rectangle(obj.X + img.X - camera.X, obj.Y + img.Y - camera.Y, (space.Width * count) + img.Width, (space.Height * count) + img.Height);
         }
 
-        public override void Draw(BitmapBits bmp, Point loc, byte subtype, bool XFlip, bool YFlip, bool includeDebug)
+        public override Sprite GetSprite(ObjectEntry obj)
         {
-            BitmapBits bits = new BitmapBits(img);
-            int count = Math.Min(6, subtype & 7) + 1;
-            Size space = Spacing[subtype >> 4];
+            int count = Math.Min(6, obj.SubType & 7) + 1;
+            Size space = Spacing[obj.SubType >> 4];
+            Point loc = new Point(img.X, img.Y);
+            List<Sprite> sprs = new List<Sprite>();
             for (int i = 0; i < count; i++)
             {
-                bmp.DrawBitmapComposited(bits, new Point(loc.X + offset.X, loc.Y + offset.Y));
+                sprs.Add(new Sprite(img.Image, loc));
                 loc += space;
             }
+            Sprite spr = new Sprite(sprs.ToArray());
+            spr.Offset = new Point(spr.X + obj.X, spr.Y + obj.Y);
+            return spr;
         }
 
         public override Type ObjectType

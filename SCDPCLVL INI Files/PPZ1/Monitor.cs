@@ -1,46 +1,25 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Drawing;
-using SonicRetro.SonLVL;
+using SonicRetro.SonLVL.API;
 
 namespace SCDPCObjectDefinitions.Common
 {
     class Monitor : ObjectDefinition
     {
-        private Point offset;
-        private BitmapBits img;
-        private int imgw, imgh;
-		private BitmapBits postimg;
-		private Point postoff;
-        private List<Point> offsets = new List<Point>();
-        private List<BitmapBits> imgs = new List<BitmapBits>();
-        private List<int> imgws = new List<int>();
-        private List<int> imghs = new List<int>();
+        private Sprite img;
+		private Sprite postimg;
+        private List<Sprite> imgs = new List<Sprite>();
 
-        public override void Init(Dictionary<string, string> data)
+        public override void Init(ObjectData data)
         {
-            img = ObjectHelper.Sprite(286, out offset);
-            imgw = img.Width;
-            imgh = img.Height;
-			postimg = ObjectHelper.Sprite(285, out postoff);
-            Point off;
-            BitmapBits im;
+            img = ObjectHelper.GetSprite(286);
+			postimg = ObjectHelper.GetSprite(285);
             for (int i = 0; i < 8; i++)
-            {
-				im = ObjectHelper.Sprite(272 + i, out off);
-                imgs.Add(im);
-                offsets.Add(off);
-                imgws.Add(im.Width);
-                imghs.Add(im.Height);
-            }
+				imgs.Add(ObjectHelper.GetSprite(272 + i));
             for (int i = 0; i < 2; i++)
-            {
-				im = ObjectHelper.Sprite(281 + i, out off);
-                imgs.Add(im);
-                offsets.Add(off);
-                imgws.Add(im.Width);
-                imghs.Add(im.Height);
-            }
+				imgs.Add(ObjectHelper.GetSprite(281 + i));
         }
 
         public override ReadOnlyCollection<byte> Subtypes()
@@ -87,57 +66,51 @@ namespace SCDPCObjectDefinitions.Common
             }
         }
 
-        public override string FullName(byte subtype)
-        {
-            return SubtypeName(subtype);
-        }
-
         public override BitmapBits Image()
         {
-            return img;
+            return img.Image;
         }
 
         public override BitmapBits Image(byte subtype)
         {
             if (subtype <= 9)
-                return imgs[subtype];
+                return imgs[subtype].Image;
             else
-                return img;
+                return img.Image;
         }
 
-        public override Rectangle Bounds(Point loc, byte subtype)
+        public override Rectangle Bounds(ObjectEntry obj, Point camera)
         {
-            if (subtype <= 7)
-                return Rectangle.Union(new Rectangle(loc.X + offset.X, loc.Y + offset.Y, imgw, imgh), new Rectangle(loc.X + offsets[subtype].X, loc.Y + offsets[subtype].Y, imgws[subtype], imghs[subtype]));
-            else if (subtype <= 9)
-                return Rectangle.Union(new Rectangle(loc.X + postoff.X, loc.Y + postoff.Y, postimg.Width, postimg.Height), new Rectangle(loc.X + offsets[subtype].X, loc.Y + offsets[subtype].Y, imgws[subtype], imghs[subtype]));
-			else
-                return new Rectangle(loc.X + offset.X, loc.Y + offset.Y, imgw, imgh);
+            Rectangle r = GetSprite(obj).Bounds;
+            r.Offset(-camera.X, -camera.Y);
+            return r;
         }
 
-        public override void Draw(BitmapBits bmp, Point loc, byte subtype, bool XFlip, bool YFlip, bool includeDebug)
+        public override Sprite GetSprite(ObjectEntry obj)
         {
+            byte subtype = obj.SubType;
             if (subtype <= 7 | subtype > 9)
             {
-    			BitmapBits bits = new BitmapBits(img);
-	            bits.Flip(XFlip, YFlip);
-                bmp.DrawBitmapComposited(bits, new Point(loc.X + offset.X, loc.Y + offset.Y));
+                BitmapBits bits = new BitmapBits(img.Image);
+                bits.Flip(obj.XFlip, obj.YFlip);
+                Sprite spr = new Sprite(bits, new Point(obj.X + img.Offset.X, obj.Y + img.Offset.Y));
 				if (subtype <= 7)
 				{
-				    bits = new BitmapBits(imgs[subtype]);
-    	            bits.Flip(XFlip, YFlip);
-                    bmp.DrawBitmapComposited(bits, new Point(loc.X + offsets[subtype].X, loc.Y + offsets[subtype].Y));
+                    bits = new BitmapBits(imgs[subtype].Image);
+                    bits.Flip(obj.XFlip, obj.YFlip);
+                    spr = new Sprite(spr, new Sprite(bits, new Point(obj.X + imgs[subtype].Offset.X, obj.Y + imgs[subtype].Offset.Y)));
 				}
+                return spr;
 		    }
 			else
 			{
-    			BitmapBits bits = new BitmapBits(postimg);
-	            bits.Flip(XFlip, YFlip);
-                bmp.DrawBitmapComposited(bits, new Point(loc.X + postoff.X, loc.Y + postoff.Y));
-    		    bits = new BitmapBits(imgs[subtype]);
-                bits.Flip(XFlip, YFlip);
-                bmp.DrawBitmapComposited(bits, new Point(loc.X + offsets[subtype].X, loc.Y + offsets[subtype].Y));
-    		}
+                BitmapBits bits = new BitmapBits(postimg.Image);
+                bits.Flip(obj.XFlip, obj.YFlip);
+                Sprite spr = new Sprite(bits, new Point(obj.X + postimg.Offset.X, obj.Y + postimg.Offset.Y));
+                bits = new BitmapBits(imgs[subtype].Image);
+                bits.Flip(obj.XFlip, obj.YFlip);
+                return new Sprite(spr, new Sprite(bits, new Point(obj.X + imgs[subtype].Offset.X, obj.Y + imgs[subtype].Offset.Y)));
+            }
 		}
 
         public override Type ObjectType
